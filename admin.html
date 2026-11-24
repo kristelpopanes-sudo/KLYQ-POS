@@ -161,8 +161,7 @@ section > h2 {
 }
 
 /* FORMS */
-input,
-select {
+input, select {
     display: block;
     width: 100%;
     padding: 12px;
@@ -175,8 +174,7 @@ select {
     outline: none;
 }
 
-input:focus,
-select:focus {
+input:focus, select:focus {
     border-color: #2c7650;
     box-shadow: 0 0 0 2px rgba(44,118,80,0.1);
 }
@@ -233,8 +231,7 @@ table {
     margin-top: 15px;
 }
 
-th,
-td {
+th, td {
     padding: 14px;
     text-align: left;
     border-bottom: 1px solid #e7eee9;
@@ -252,16 +249,6 @@ td {
 
 tbody tr:hover {
     background: #f7faf8;
-}
-
-/* EMPTY STATE */
-.empty-state {
-    background: #f4f8f5;
-    padding: 30px;
-    margin-top: 15px;
-    text-align: center;
-    border-radius: 10px;
-    color: #75847a;
 }
 
 /* RESPONSIVE */
@@ -324,19 +311,26 @@ tbody tr:hover {
 
 <body>
 
-<!-- ADMIN LOGIN CHECK -->
+<!-- ADMIN ACCESS CHECK -->
 <script>
-const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+(function() {
+    let currentUser = null;
 
-if (!currentUser || currentUser.role !== "Admin") {
-    alert("Admin access only!");
-    window.location.href = "login.html";
-}
+    try {
+        currentUser = JSON.parse(localStorage.getItem("currentUser"));
+    } catch (error) {
+        currentUser = null;
+    }
+
+    if (!currentUser || currentUser.role !== "Admin") {
+        alert("Admin access only!");
+        window.location.replace("login.html");
+    }
+})();
 </script>
 
 <!-- SIDEBAR -->
 <aside>
-
     <div class="brand">
         <h2>KLYQ</h2>
         <p>Management System</p>
@@ -349,8 +343,8 @@ if (!currentUser || currentUser.role !== "Admin") {
         <button class="nav-btn" onclick="showPage('transactions', this)">Transactions</button>
         <button class="nav-btn" onclick="showPage('reports', this)">Reports</button>
         <button class="nav-btn" onclick="showPage('users', this)">User Management</button>
+        <button class="nav-btn" onclick="showPage('activity', this)">Activity Logs</button>
     </nav>
-
 </aside>
 
 <!-- HEADER -->
@@ -364,11 +358,9 @@ if (!currentUser || currentUser.role !== "Admin") {
 
 <!-- DASHBOARD -->
 <section id="dashboard">
-
     <h2>Dashboard Overview</h2>
 
     <div class="cards">
-
         <div class="card">
             <h3>Total Products</h3>
             <h2 id="totalProducts">0</h2>
@@ -388,7 +380,6 @@ if (!currentUser || currentUser.role !== "Admin") {
             <h3>Registered Users</h3>
             <h2 id="totalUsers">0</h2>
         </div>
-
     </div>
 
     <div class="card">
@@ -398,44 +389,41 @@ if (!currentUser || currentUser.role !== "Admin") {
             transactions, reports, and registered users here.
         </p>
     </div>
-
 </section>
 
 <!-- PRODUCTS -->
 <section id="products" class="hidden">
-
     <h2>Product Management</h2>
 
     <div class="card">
-
         <h3>Add New Product</h3>
 
         <form id="productForm">
-
-            <label>Product Name</label>
+            <label for="productName">Product Name</label>
             <input type="text" id="productName"
                 placeholder="Enter product name" required>
 
-            <label>Product Price (₱)</label>
+            <label for="productPrice">Product Price (₱)</label>
             <input type="number" id="productPrice"
                 placeholder="Enter price" min="0.01"
                 step="0.01" required>
 
-            <label>Product Stock</label>
+            <label for="productStock">Product Stock</label>
             <input type="number" id="productStock"
                 placeholder="Enter stock quantity"
                 min="0" step="1" required>
 
-            <button class="action" type="submit">
-                Add Product
-            </button>
+            <label for="productExpiration">Expiration Date (optional)</label>
+            <input type="date" id="productExpiration">
 
+            <label for="productRestockLevel">Low-stock Alert Level</label>
+            <input type="number" id="productRestockLevel" min="0" step="1" value="5" required>
+
+            <button class="action" type="submit">Add Product</button>
         </form>
-
     </div>
 
     <div class="card">
-
         <h3>Product List</h3>
 
         <div class="table-container">
@@ -445,25 +433,27 @@ if (!currentUser || currentUser.role !== "Admin") {
                         <th>Product</th>
                         <th>Price</th>
                         <th>Stock</th>
+                        <th>Expiration</th>
                         <th>Action</th>
                     </tr>
                 </thead>
-
                 <tbody id="productList"></tbody>
             </table>
         </div>
-
     </div>
-
 </section>
 
 <!-- INVENTORY -->
 <section id="inventory" class="hidden">
-
     <h2>Inventory Management</h2>
 
     <div class="card">
+        <h3>Smart Restock Alerts</h3>
+        <p>Products at or below their configured low-stock alert level are listed with a suggested restock quantity.</p>
+        <div id="restockAlerts"></div>
+    </div>
 
+    <div class="card">
         <h3>Available Inventory</h3>
 
         <div class="table-container">
@@ -473,25 +463,22 @@ if (!currentUser || currentUser.role !== "Admin") {
                         <th>Product</th>
                         <th>Price</th>
                         <th>Available Stock</th>
+                        <th>Restock Suggestion</th>
+                        <th>Expiration Status</th>
                         <th>Status</th>
                     </tr>
                 </thead>
-
                 <tbody id="inventoryList"></tbody>
             </table>
         </div>
-
     </div>
-
 </section>
 
 <!-- TRANSACTIONS -->
 <section id="transactions" class="hidden">
-
     <h2>Transaction History</h2>
 
     <div class="card">
-
         <h3>All Cashier Sales Transactions</h3>
 
         <div class="table-container">
@@ -504,22 +491,17 @@ if (!currentUser || currentUser.role !== "Admin") {
                         <th>Total Amount</th>
                     </tr>
                 </thead>
-
                 <tbody id="transactionList"></tbody>
             </table>
         </div>
-
     </div>
-
 </section>
 
 <!-- REPORTS -->
 <section id="reports" class="hidden">
-
     <h2>Sales Reports</h2>
 
     <div class="cards">
-
         <div class="card">
             <h3>Total Revenue</h3>
             <h2 id="reportRevenue">₱0.00</h2>
@@ -529,18 +511,14 @@ if (!currentUser || currentUser.role !== "Admin") {
             <h3>Number of Sales</h3>
             <h2 id="reportCount">0</h2>
         </div>
-
     </div>
-
 </section>
 
-<!-- USER MANAGEMENT -->
+<!-- USERS -->
 <section id="users" class="hidden">
-
     <h2>User Management</h2>
 
     <div class="card">
-
         <h3>Registered Users</h3>
 
         <div class="table-container">
@@ -551,21 +529,51 @@ if (!currentUser || currentUser.role !== "Admin") {
                         <th>Username</th>
                         <th>Email</th>
                         <th>Role</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
-
                 <tbody id="userList"></tbody>
             </table>
         </div>
-
     </div>
+</section>
 
+<!-- ACTIVITY LOGS -->
+<section id="activity" class="hidden">
+    <h2>Activity Logs</h2>
+    <div class="card">
+        <h3>Recent Admin and Cashier Activities</h3>
+        <p>Records actions performed in this browser, including product changes and completed sales.</p>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Date & Time</th><th>User</th><th>Role</th><th>Activity</th><th>Details</th></tr></thead>
+                <tbody id="activityList"></tbody>
+            </table>
+        </div>
+    </div>
 </section>
 
 </main>
 </div>
 
+<!-- LOAD PRODUCTS.JS FIRST -->
+<script src="products.js"></script>
+
 <script>
+
+/* ==============================
+   CHECK PRODUCTS.JS
+============================== */
+
+if (
+    typeof getGPSProducts !== "function" ||
+    typeof addGPSProduct !== "function" ||
+    typeof deleteGPSProduct !== "function" ||
+    typeof onGPSProductsChanged !== "function"
+) {
+    alert("products.js was not loaded. Check if it is in the same folder as admin.html.");
+}
+
 
 /* ==============================
    DATABASE
@@ -574,6 +582,7 @@ if (!currentUser || currentUser.role !== "Admin") {
 let products = [];
 let transactions = [];
 let users = [];
+
 
 /* ==============================
    HELPER FUNCTIONS
@@ -594,14 +603,26 @@ function money(value) {
 }
 
 function loadData() {
-    products = JSON.parse(localStorage.getItem("gps_products")) || [];
-    transactions = JSON.parse(localStorage.getItem("gps_tx")) || [];
-    users = JSON.parse(localStorage.getItem("gps_users")) || [];
+
+    products = getGPSProducts();
+
+    try {
+        transactions = JSON.parse(
+            localStorage.getItem("gps_tx")
+        ) || [];
+
+        users = JSON.parse(
+            localStorage.getItem("gps_users")
+        ) || [];
+
+    } catch (error) {
+        console.error("Loading data error:", error);
+        transactions = [];
+        users = [];
+    }
+
 }
 
-function saveProducts() {
-    localStorage.setItem("gps_products", JSON.stringify(products));
-}
 
 /* ==============================
    NAVIGATION
@@ -625,14 +646,8 @@ function showPage(page, button = null) {
 
     if (button) {
         button.classList.add("active");
-    } else {
-        const navButton = [...document.querySelectorAll(".nav-btn")]
-            .find(btn => btn.getAttribute("onclick").includes("'" + page + "'"));
-
-        if (navButton) navButton.classList.add("active");
     }
 
-    // Refresh shared data whenever a page is opened
     loadData();
 
     updateDashboard();
@@ -640,7 +655,9 @@ function showPage(page, button = null) {
     renderInventory();
     renderTransactions();
     renderUsers();
+    renderActivityLogs();
 }
+
 
 /* ==============================
    DASHBOARD
@@ -671,6 +688,7 @@ function updateDashboard() {
         transactions.length;
 }
 
+
 /* ==============================
    ADD PRODUCT
 ============================== */
@@ -679,37 +697,42 @@ document.getElementById("productForm").addEventListener("submit", function(e) {
 
     e.preventDefault();
 
-    loadData();
-
     const name = document.getElementById("productName").value.trim();
     const price = Number(document.getElementById("productPrice").value);
     const stock = Number(document.getElementById("productStock").value);
+    const expirationDate = document.getElementById("productExpiration").value;
+    const restockLevel = Number(document.getElementById("productRestockLevel").value);
 
     if (!name || !Number.isFinite(price) || price <= 0 ||
-        !Number.isInteger(stock) || stock < 0) {
+        !Number.isInteger(stock) || stock < 0 || !Number.isInteger(restockLevel) || restockLevel < 0) {
 
-        alert("Please enter valid product information.");
+        alert("Please enter valid product information!");
         return;
     }
 
-    products.push({
-        id: Date.now(),
-        name: name,
-        price: price,
-        stock: stock
-    });
+    if (typeof addGPSProduct !== "function") {
+        alert("Product system is not loaded. Check products.js.");
+        return;
+    }
 
-    saveProducts();
+    const result = addGPSProduct(name, price, stock, expirationDate, restockLevel);
 
-    this.reset();
+    if (!result) {
+        return;
+    }
 
     loadData();
+
     renderProducts();
     renderInventory();
     updateDashboard();
 
+    this.reset();
+
     alert("Product added successfully!");
+
 });
+
 
 /* ==============================
    DISPLAY PRODUCTS
@@ -719,11 +742,13 @@ function renderProducts() {
 
     const list = document.getElementById("productList");
 
+    products = getGPSProducts();
+
     if (products.length === 0) {
 
         list.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align:center;">
+                <td colspan="5" style="text-align:center;">
                     No products available.
                 </td>
             </tr>
@@ -737,14 +762,57 @@ function renderProducts() {
             <td>${escapeHTML(p.name)}</td>
             <td>₱${money(p.price)}</td>
             <td>${Number(p.stock)}</td>
+            <td>${p.expirationDate ? escapeHTML(p.expirationDate) : "Not set"}</td>
             <td>
+                <button class="action" onclick="editProduct('${escapeHTML(p.id)}')">Edit</button>
                 <button class="delete-btn"
-                    onclick="deleteProduct(${Number(p.id)})">
+                    onclick="deleteProduct('${escapeHTML(p.id)}')">
                     Delete
                 </button>
             </td>
         </tr>
     `).join("");
+
+}
+
+
+/* ==============================
+   EDIT PRODUCT DETAILS
+============================== */
+
+function editProduct(id) {
+    const product = getGPSProducts().find(p => String(p.id) === String(id));
+    if (!product) return alert("Product not found.");
+
+    const name = prompt("Product name:", product.name);
+    if (name === null) return;
+    const priceText = prompt("Product price:", product.price);
+    if (priceText === null) return;
+    const stockText = prompt("Current stock quantity:", product.stock);
+    if (stockText === null) return;
+    const expirationDate = prompt("Expiration date (YYYY-MM-DD), leave blank if none:", product.expirationDate || "");
+    if (expirationDate === null) return;
+    const thresholdText = prompt("Low-stock alert level:", product.restockLevel ?? 5);
+    if (thresholdText === null) return;
+
+    const price = Number(priceText);
+    const stock = Number(stockText);
+    const restockLevel = Number(thresholdText);
+    if (!name.trim() || !Number.isFinite(price) || price <= 0 || !Number.isInteger(stock) || stock < 0 || !Number.isInteger(restockLevel) || restockLevel < 0) {
+        alert("Invalid product details. Please try again.");
+        return;
+    }
+    if (expirationDate && !/^\d{4}-\d{2}-\d{2}$/.test(expirationDate)) {
+        alert("Please enter the expiration date in YYYY-MM-DD format.");
+        return;
+    }
+
+    if (!updateGPSProduct(id, { name: name.trim(), price, stock, expirationDate, restockLevel })) {
+        alert("Unable to update product. Check if the product name already exists.");
+        return;
+    }
+    loadData(); renderProducts(); renderInventory(); updateDashboard();
+    alert("Product details updated successfully!");
 }
 
 /* ==============================
@@ -757,19 +825,23 @@ function deleteProduct(id) {
         return;
     }
 
+    const result = deleteGPSProduct(id);
+
+    if (!result) {
+        alert("Unable to delete product. Product may not exist.");
+        return;
+    }
+
     loadData();
 
-    products = products.filter(p => Number(p.id) !== Number(id));
-
-    saveProducts();
-
-    loadData();
     renderProducts();
     renderInventory();
     updateDashboard();
 
     alert("Product deleted successfully!");
+
 }
+
 
 /* ==============================
    INVENTORY
@@ -783,7 +855,7 @@ function renderInventory() {
 
         list.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align:center;">
+                <td colspan="6" style="text-align:center;">
                     No inventory available.
                 </td>
             </tr>
@@ -796,22 +868,52 @@ function renderInventory() {
 
         const stock = Number(p.stock);
 
-        const status = stock <= 0
-            ? "Out of Stock"
-            : stock <= 5
-                ? "Low Stock"
-                : "Available";
+        const threshold = Number.isInteger(Number(p.restockLevel)) ? Number(p.restockLevel) : 5;
+        const status = stock <= 0 ? "Out of Stock" : stock <= threshold ? "Low Stock" : "Available";
+        const today = new Date(); today.setHours(0,0,0,0);
+        const expiry = p.expirationDate ? new Date(p.expirationDate + "T00:00:00") : null;
+        const daysLeft = expiry ? Math.ceil((expiry - today) / 86400000) : null;
+        const expiryStatus = !expiry ? "Not set" : daysLeft < 0 ? "Expired" : daysLeft <= 30 ? `Expires in ${daysLeft} day(s)` : "Not near expiry";
+        const suggested = stock <= threshold ? Math.max(threshold * 2 - stock, 1) : 0;
 
         return `
             <tr>
                 <td>${escapeHTML(p.name)}</td>
                 <td>₱${money(p.price)}</td>
                 <td>${stock}</td>
+                <td>${suggested ? `Restock ${suggested}` : "No restock needed"}</td>
+                <td>${escapeHTML(expiryStatus)}</td>
                 <td>${status}</td>
             </tr>
         `;
 
     }).join("");
+
+    const alerts = document.getElementById("restockAlerts");
+    const expiryAlerts = products.filter(p => {
+        if (!p.expirationDate) return false;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const expiryDate = new Date(p.expirationDate + "T00:00:00");
+        return Math.ceil((expiryDate - today) / 86400000) <= 30;
+    });
+    const lowProducts = products.filter(p => Number(p.stock) <= (Number.isInteger(Number(p.restockLevel)) ? Number(p.restockLevel) : 5));
+    alerts.innerHTML = lowProducts.length ? `<ul>${lowProducts.map(p => {
+        const threshold = Number.isInteger(Number(p.restockLevel)) ? Number(p.restockLevel) : 5;
+        const amount = Math.max(threshold * 2 - Number(p.stock), 1);
+        return `<li><strong>${escapeHTML(p.name)}</strong>: ${Number(p.stock)} left (alert at ${threshold}). Suggested restock: <strong>${amount}</strong>.</li>`;
+    }).join("")}</ul>` : "<p>No products currently need restocking.</p>";
+    alerts.innerHTML += `<h4>Expiration Warnings</h4>` + (expiryAlerts.length
+        ? `<ul>${expiryAlerts.map(p => {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const days = Math.ceil((new Date(p.expirationDate + "T00:00:00") - today) / 86400000);
+            return `<li><strong>${escapeHTML(p.name)}</strong>: ${days < 0 ? `expired ${Math.abs(days)} day(s) ago` : `expires in ${days} day(s)`} (${escapeHTML(p.expirationDate)}).</li>`;
+        }).join("")}</ul>` : "<p>No products are expired or nearing expiration within 30 days.</p>");
+}
+
+function renderActivityLogs() {
+    const list = document.getElementById("activityList");
+    const logs = getGPSActivityLogs().slice().reverse();
+    list.innerHTML = logs.length ? logs.map(log => `<tr><td>${escapeHTML(log.date)}</td><td>${escapeHTML(log.user)}</td><td>${escapeHTML(log.role)}</td><td>${escapeHTML(log.action)}</td><td>${escapeHTML(log.details)}</td></tr>`).join("") : `<tr><td colspan="5" style="text-align:center">No activity recorded yet.</td></tr>`;
 }
 
 /* ==============================
@@ -843,7 +945,9 @@ function renderTransactions() {
             <td>₱${money(tx.total)}</td>
         </tr>
     `).join("");
+
 }
+
 
 /* ==============================
    USER MANAGEMENT
@@ -857,7 +961,7 @@ function renderUsers() {
 
         list.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align:center;">
+                <td colspan="5" style="text-align:center;">
                     No registered users.
                 </td>
             </tr>
@@ -866,15 +970,76 @@ function renderUsers() {
         return;
     }
 
-    list.innerHTML = users.map(user => `
+    list.innerHTML = users.map((user, index) => `
         <tr>
             <td>${escapeHTML(user.name || user.fullName || "")}</td>
             <td>${escapeHTML(user.username || "")}</td>
             <td>${escapeHTML(user.email || "")}</td>
             <td>${escapeHTML(user.role || "")}</td>
+            <td>
+                <button class="delete-btn" onclick="deleteUser(${index})">
+                    Delete
+                </button>
+            </td>
         </tr>
     `).join("");
+
 }
+
+/* Delete a registered account from User Management. */
+function deleteUser(index) {
+
+    const userToDelete = users[index];
+
+    if (!userToDelete) {
+        alert("The selected account could not be found. Please refresh the page.");
+        return;
+    }
+
+    // Prevent the administrator from deleting the account currently in use.
+    const isCurrentAccount = currentUser && (
+        (userToDelete.id != null && currentUser.id != null && userToDelete.id === currentUser.id) ||
+        (userToDelete.username && currentUser.username &&
+            userToDelete.username.toLowerCase() === currentUser.username.toLowerCase()) ||
+        (userToDelete.email && currentUser.email &&
+            userToDelete.email.toLowerCase() === currentUser.email.toLowerCase())
+    );
+
+    if (isCurrentAccount) {
+        alert("You cannot delete the administrator account currently logged in.");
+        return;
+    }
+
+    // Keep at least one administrator account in the system.
+    const isAdminAccount = String(userToDelete.role || "").toLowerCase() === "admin";
+    const adminCount = users.filter(user =>
+        String(user.role || "").toLowerCase() === "admin"
+    ).length;
+
+    if (isAdminAccount && adminCount <= 1) {
+        alert("You cannot delete the last administrator account.");
+        return;
+    }
+
+    const accountName = userToDelete.name || userToDelete.fullName || userToDelete.username || "this account";
+
+    if (!confirm(`Are you sure you want to delete the account for ${accountName}? This action cannot be undone.`)) {
+        return;
+    }
+
+    users.splice(index, 1);
+    localStorage.setItem("gps_users", JSON.stringify(users));
+
+    if (typeof logGPSActivity === "function") {
+        logGPSActivity("User account deleted", `${accountName} (${userToDelete.username || userToDelete.email || "no username"}) was removed from User Management.`);
+    }
+
+    renderUsers();
+    updateDashboard();
+    alert("User account deleted successfully.");
+
+}
+
 
 /* ==============================
    LOGOUT
@@ -889,13 +1054,58 @@ function logout() {
     localStorage.removeItem("currentUser");
 
     window.location.href = "login.html";
+
 }
+
+
+/* ==============================
+   AUTOMATIC PRODUCT REFRESH
+============================== */
+
+onGPSProductsChanged(function(updatedProducts) {
+
+    products = updatedProducts;
+
+    renderProducts();
+    renderInventory();
+    updateDashboard();
+
+});
+
+window.addEventListener("gpsActivityUpdated", renderActivityLogs);
+
+
+/* ==============================
+   OTHER DATA REFRESH
+============================== */
+
+window.addEventListener("storage", function(event) {
+
+    if (event.key === "gps_tx" || event.key === "gps_users") {
+
+        loadData();
+
+        updateDashboard();
+        renderTransactions();
+        renderUsers();
+
+    }
+
+});
+
 
 /* ==============================
    INITIALIZE ADMIN DASHBOARD
 ============================== */
 
 loadData();
+
+updateDashboard();
+renderProducts();
+renderInventory();
+renderTransactions();
+renderUsers();
+
 showPage("dashboard");
 
 </script>
