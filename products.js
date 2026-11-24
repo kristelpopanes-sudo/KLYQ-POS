@@ -1,87 +1,124 @@
 
-// ======================================
-// KLYQ GROCERY POS
-// SHARED PRODUCT MANAGEMENT
-// ======================================
+const GPS_PRODUCT_KEY = "gps_products";
+const GPS_ACTIVITY_KEY = "gps_activity_logs";
 
-// GET ALL PRODUCTS
+// Shared activity history stored in this browser.
+function logGPSActivity(action, details, actor) {
+    try {
+        const logs = JSON.parse(localStorage.getItem(GPS_ACTIVITY_KEY) || "[]");
+        const user = actor || JSON.parse(localStorage.getItem("currentUser") || "null") || {};
+        logs.push({
+            id: "LOG-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+            action: String(action || "Activity"),
+            details: String(details || ""),
+            user: user.name || user.fullName || user.username || "Unknown user",
+            role: user.role || "Unknown",
+            date: new Date().toLocaleString(),
+            timestamp: Date.now()
+        });
+        localStorage.setItem(GPS_ACTIVITY_KEY, JSON.stringify(logs.slice(-1000)));
+        window.dispatchEvent(new CustomEvent("gpsActivityUpdated"));
+        return true;
+    } catch (error) {
+        console.error("Activity log error:", error);
+        return false;
+    }
+}
+
+function getGPSActivityLogs() {
+    try {
+        const logs = JSON.parse(localStorage.getItem(GPS_ACTIVITY_KEY) || "[]");
+        return Array.isArray(logs) ? logs : [];
+    } catch (error) { return []; }
+}
+
+// GET PRODUCTS
 function getGPSProducts() {
     try {
         const products = JSON.parse(
-            localStorage.getItem("gps_products")
+            localStorage.getItem(GPS_PRODUCT_KEY) || "[]"
         );
 
         return Array.isArray(products) ? products : [];
 
     } catch (error) {
-        console.error("Error loading products:", error);
+        console.error("Loading error:", error);
         return [];
     }
 }
 
-
 // SAVE PRODUCTS
 function saveGPSProducts(products) {
 
-    if (!Array.isArray(products)) {
-        console.error("Invalid product data!");
+    if (!Array.isArray(products)) return false;
+
+    try {
+        localStorage.setItem(
+            GPS_PRODUCT_KEY,
+            JSON.stringify(products)
+        );
+
+        window.dispatchEvent(
+            new CustomEvent("gpsProductsUpdated", {
+                detail: products
+            })
+        );
+
+        return true;
+
+    } catch (error) {
+        console.error("Saving error:", error);
+        alert("Unable to save products!");
         return false;
     }
-
-    localStorage.setItem(
-        "gps_products",
-        JSON.stringify(products)
-    );
-
-    // Notify the current page
-    window.dispatchEvent(
-        new Event("gpsProductsUpdated")
-    );
-
-    return true;
 }
 
-
-// ADD NEW PRODUCT
-function addGPSProduct(name, price, stock) {
+// ADD PRODUCT
+function addGPSProduct(name, price, stock, expirationDate = "", restockLevel = 5) {
 
     const products = getGPSProducts();
 
-    name = String(name).trim();
+    name = String(name ?? "").trim();
     price = Number(price);
     stock = Number(stock);
 
-    if (!name || !Number.isFinite(price) ||
-        !Number.isInteger(stock) || price <= 0 || stock < 0) {
+    if (
+        !name ||
+        !Number.isFinite(price) ||
+        price <= 0 ||
+        !Number.isInteger(stock) ||
+        stock < 0
+    ) {
         alert("Please enter valid product information!");
         return false;
     }
 
-    const existingProduct = products.find(product =>
-        product.name.toLowerCase() === name.toLowerCase()
+    const duplicate = products.some(product =>
+        String(product.name).trim().toLowerCase() === name.toLowerCase()
     );
 
-    if (existingProduct) {
+    if (duplicate) {
         alert("Product already exists!");
         return false;
     }
 
     const newProduct = {
-        id: Date.now(),
+        id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
         name: name,
         price: price,
-        stock: stock
+        stock: stock,
+        expirationDate: expirationDate || "",
+        restockLevel: Number.isInteger(Number(restockLevel)) && Number(restockLevel) >= 0 ? Number(restockLevel) : 5
     };
 
     products.push(newProduct);
 
-    saveGPSProducts(products);
-
-    alert("Product successfully added!");
-
+    if (!saveGPSProducts(products)) {
+        return false;
+    }
+    logGPSActivity("Product added", `${name} added with ${stock} item(s).`);
     return newProduct;
 }
-
 
 // UPDATE PRODUCT
 function updateGPSProduct(id, updatedData) {
@@ -92,18 +129,30 @@ function updateGPSProduct(id, updatedData) {
         product => String(product.id) === String(id)
     );
 
-    if (index === -1) {
-        alert("Product not found!");
-        return false;
-    }
+    if (index === -1) return false;
 
     const name = String(updatedData.name ?? "").trim();
     const price = Number(updatedData.price);
     const stock = Number(updatedData.stock);
 
-    if (!name || !Number.isFinite(price) ||
-        !Number.isInteger(stock) || price <= 0 || stock < 0) {
-        alert("Please enter valid product information!");
+    if (
+        !name ||
+        !Number.isFinite(price) ||
+        price <= 0 ||
+        !Number.isInteger(stock) ||
+        stock < 0
+    ) {
+        alert("Invalid product information!");
+        return false;
+    }
+
+    const duplicate = products.some((product, i) =>
+        i !== index &&
+        String(product.name).trim().toLowerCase() === name.toLowerCase()
+    );
+
+    if (duplicate) {
+        alert("Product name already exists!");
         return false;
     }
 
@@ -111,16 +160,16 @@ function updateGPSProduct(id, updatedData) {
         ...products[index],
         name: name,
         price: price,
-        stock: stock
+        stock: stock,
+        expirationDate: updatedData.expirationDate ?? products[index].expirationDate ?? "",
+        restockLevel: Number.isInteger(Number(updatedData.restockLevel)) && Number(updatedData.restockLevel) >= 0
+            ? Number(updatedData.restockLevel) : (products[index].restockLevel ?? 5)
     };
 
-    saveGPSProducts(products);
-
-    alert("Product successfully updated!");
-
-    return true;
+    const saved = saveGPSProducts(products);
+    if (saved) logGPSActivity("Product updated", `${name} product information was updated.`);
+    return saved;
 }
-
 
 // DELETE PRODUCT
 function deleteGPSProduct(id) {
@@ -132,33 +181,27 @@ function deleteGPSProduct(id) {
     );
 
     if (updatedProducts.length === products.length) {
-        alert("Product not found!");
         return false;
     }
 
-    saveGPSProducts(updatedProducts);
-
-    alert("Product successfully deleted!");
-
-    return true;
+    const deleted = products.find(product => String(product.id) === String(id));
+    const saved = saveGPSProducts(updatedProducts);
+    if (saved && deleted) logGPSActivity("Product deleted", `${deleted.name} was removed from the product list.`);
+    return saved;
 }
 
-
-// LISTEN FOR PRODUCT CHANGES
+// LISTEN FOR CHANGES
 function onGPSProductsChanged(callback) {
 
-    // Changes from another browser tab
-    window.addEventListener("storage", function(event) {
-
-        if (event.key === "gps_products") {
-            callback(getGPSProducts());
-        }
-
-    });
-
-    // Changes from the current page
     window.addEventListener("gpsProductsUpdated", function() {
         callback(getGPSProducts());
     });
 
+    window.addEventListener("storage", function(event) {
+
+        if (event.key === GPS_PRODUCT_KEY) {
+            callback(getGPSProducts());
+        }
+
+    });
 }
